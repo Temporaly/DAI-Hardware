@@ -1,12 +1,62 @@
-
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Image, StyleSheet, Platform, Alert, Linking } from 'react-native';
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import * as React from 'react';
+import { useEffect } from 'react';
+import { Accelerometer } from 'expo-sensors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export default function index() {
+const THRESHOLD = 1.5; // Ajusta el umbral de sensibilidad aquí
+
+export default function Index() {
+  useEffect(() => {
+    const subscription = Accelerometer.addListener(accelerometerData => {
+      const { x, y, z } = accelerometerData;
+      if (Math.abs(x) > THRESHOLD || Math.abs(y) > THRESHOLD || Math.abs(z) > THRESHOLD) {
+        handleShake();
+      }
+    });
+
+    Accelerometer.setUpdateInterval(100); // Actualiza cada 100 ms
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleShake = async () => {
+    const emergencyNumber = await AsyncStorage.getItem('emergencyNumber');
+    if (emergencyNumber) {
+      const message = '¡Ayuda! Necesito asistencia inmediata.';
+      const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}&phone=${emergencyNumber}`;
+      const smsUrl = `sms:${emergencyNumber}?body=${encodeURIComponent(message)}`;
+
+      // Intentar enviar mensaje por WhatsApp primero
+      Linking.canOpenURL(whatsappUrl)
+        .then((supported) => {
+          if (supported) {
+            Linking.openURL(whatsappUrl);
+          } else {
+            // Si no se puede enviar por WhatsApp, intenta enviar SMS
+            Linking.canOpenURL(smsUrl).then((smsSupported) => {
+              if (smsSupported) {
+                Linking.openURL(smsUrl);
+              } else {
+                Alert.alert('Error', 'No se puede enviar el mensaje.');
+              }
+            });
+          }
+        })
+        .catch(() => {
+          Alert.alert('Error', 'No se pudo enviar el mensaje.');
+        });
+    } else {
+      Alert.alert('Número no configurado', 'Por favor, configura un número de emergencia.');
+    }
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
