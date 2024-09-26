@@ -6,7 +6,7 @@ const EmergencyNumberScreen = () => {
   const [emergencyNumber, setEmergencyNumber] = useState('');
 
   const isValidNumber = (number: string): boolean => {
-    const phoneRegex = /^\d{10}$/; // Ejemplo: 10 dígitos
+    const phoneRegex = /^\d{13}$/;
     return phoneRegex.test(number);
   };
 
